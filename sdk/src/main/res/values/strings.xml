@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Zaturn SDK</string>
+
+    <!-- Placeholder values -->
+
+    <string name="google_client_id_reversed">ch.papers.zaturnsdk</string>
+
+    <string name="apple_redirect_uri_scheme">https</string>
+    <string name="apple_redirect_uri_host">apple.com</string>
+    <string name="apple_redirect_uri_prefix">/</string>
 </resources>

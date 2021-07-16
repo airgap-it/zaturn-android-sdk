@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="ch.papers.zaturnsdk">
 
     <application
@@ -10,8 +11,35 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ZaturnSDK">
         <activity
-            android:name=".internal.oauth.google.GoogleOAuthActivity"
+            android:name=".internal.oauth.apple.AppAuthActivity"
+            android:windowSoftInputMode="stateHidden"
             android:theme="@style/Theme.Transparent" />
+        <activity
+            android:name=".internal.oauth.google.AppAuthActivity"
+            android:windowSoftInputMode="stateHidden"
+            android:theme="@style/Theme.Transparent" />
+        <activity
+            android:name=".internal.oauth.google.GoogleSignInActivity"
+            android:windowSoftInputMode="stateHidden"
+            android:theme="@style/Theme.Transparent" />
+        <activity
+            android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            tools:node="replace">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="@string/google_client_id_reversed"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="@string/apple_redirect_uri_scheme"
+                    android:host="@string/apple_redirect_uri_host"
+                    android:pathPrefix="@string/apple_redirect_uri_prefix"/>
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

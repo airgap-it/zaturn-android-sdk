@@ -24,6 +24,7 @@ import kotlin.math.min
 
 public class Zaturn internal constructor(
     private val nodes: List<ZaturnNode>,
+    private val oAuth: OAuth,
     private val crypto: Crypto,
     private val secretSharing: SecretSharing,
     private val shareConfiguration: ShareConfiguration,
@@ -37,10 +38,7 @@ public class Zaturn internal constructor(
 
     @Throws(ZaturnException::class)
     public suspend fun getOAuthToken(context: Context, oAuthProvider: OAuthProvider): String =
-        catchInternal {
-            val oAuth = OAuth(oAuthProvider)
-            return oAuth.signIn(context, keyPair.publicKey)
-        }
+        catchInternal { oAuth.signIn(context, nonce, oAuthProvider) }
 
     @Throws(ZaturnException::class)
     public suspend fun setupRecovery(id: String, secret: ByteArray, token: String) =
@@ -130,6 +128,7 @@ public class Zaturn internal constructor(
                 val http = KtorHttp(url(it, ZaturnConfiguration.API))
                 ZaturnNode(it, http)
             }
+            val oAuth = OAuth()
             val crypto = SodiumCrypto()
             val secretSharing = SskrSecretSharing()
             val shareConfiguration = ShareConfiguration(
@@ -143,7 +142,7 @@ public class Zaturn internal constructor(
                     ?: ZaturnConfiguration.MIN_GROUP_MEMBER_THRESHOLD.toInt(),
             ).also(this::validateConfiguration)
 
-            return Zaturn(nodes, crypto, secretSharing, shareConfiguration)
+            return Zaturn(nodes, oAuth, crypto, secretSharing, shareConfiguration)
         }
 
         @Throws(ZaturnException::class)
