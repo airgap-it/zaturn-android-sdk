@@ -15,6 +15,8 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders['appAuthRedirectScheme'] = 'ch.papers.zaturnsdk'
     }
 
     buildTypes {
@@ -63,6 +65,10 @@ dependencies {
     // Google Play Services
     def play_services_version = "19.0.0"
     implementation "com.google.android.gms:play-services-auth:$play_services_version"
+
+    // AppAuth
+    def app_auth_version = "0.9.1"
+    implementation "net.openid:appauth:$app_auth_version"
 
     // Ktor
     def ktor_version = "1.6.0"

@@ -6,12 +6,13 @@ import ch.papers.zaturnsdk.internal.crypto.data.PublicKey
 import ch.papers.zaturnsdk.internal.oauth.apple.AppleOAuth
 import ch.papers.zaturnsdk.internal.oauth.google.GoogleOAuth
 
-internal interface OAuth {
-    suspend fun signIn(context: Context, publicKey: PublicKey): String
+internal class OAuth(
+    private val appleOAuth: AppleOAuth = AppleOAuth.instance(),
+    private val googleOAuth: GoogleOAuth = GoogleOAuth.instance()
+) {
+    suspend fun signIn(context: Context, nonce: String, provider: OAuthProvider): String =
+        when (provider) {
+            is OAuthProvider.Apple -> appleOAuth.signIn(context, provider.clientId, provider.redirectUri, nonce)
+            is OAuthProvider.Google -> googleOAuth.signIn(context, provider.clientId, provider.serverClientId, nonce)
+        }
 }
-
-internal fun OAuth(provider: OAuthProvider): OAuth =
-    when (provider) {
-        is OAuthProvider.Apple -> AppleOAuth()
-        is OAuthProvider.Google -> GoogleOAuth(provider)
-    }

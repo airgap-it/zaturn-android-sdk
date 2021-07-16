@@ -13,15 +13,14 @@ import ch.papers.zaturnsdk.internal.util.tryComplete
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.BeginSignInResult
 import com.google.android.gms.auth.api.identity.Identity
-import com.google.android.gms.auth.api.identity.SignInCredential
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-internal class GoogleOAuthActivity : AppCompatActivity() {
-    private var credentialDeferred: CompletableDeferred<SignInCredential>? = null
+internal class GoogleSignInActivity : AppCompatActivity() {
+    private var idTokenDeferred: CompletableDeferred<String?>? = null
 
     private val disposableHandles: MutableList<DisposableHandle> = mutableListOf()
 
@@ -31,11 +30,11 @@ internal class GoogleOAuthActivity : AppCompatActivity() {
         val serverClientId = intent.extras?.getString(EXTRA_SERVER_CLIENT_ID) ?: failWithMissingServerClientId()
         val nonce = intent.extras?.getString(EXTRA_NONCE) ?: failWithMissingNonce()
 
-        credentialDeferred = GoogleOAuth.instance(serverClientId).credentialDeferred
+        idTokenDeferred = GoogleOAuth.instance().idTokenDeferred(serverClientId)
 
-        disposableHandles.addNotNull(credentialDeferred?.invokeOnCompletion { finish() })
+        disposableHandles.addNotNull(idTokenDeferred?.invokeOnCompletion { finish() })
         lifecycleScope.launch {
-            credentialDeferred?.catch {
+            idTokenDeferred?.catch {
                 oneTapSignIn(serverClientId, nonce)
             }
         }
@@ -63,9 +62,9 @@ internal class GoogleOAuthActivity : AppCompatActivity() {
         }.build()
 
         val startIntentSenderForResult = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
-            credentialDeferred?.tryComplete {
+            idTokenDeferred?.tryComplete {
                 when (it.resultCode) {
-                    Activity.RESULT_OK -> oneTapClient.getSignInCredentialFromIntent(it.data)
+                    Activity.RESULT_OK -> oneTapClient.getSignInCredentialFromIntent(it.data)?.googleIdToken
                     else -> failWithSignInFailure()
                 }
             }
@@ -88,10 +87,10 @@ internal class GoogleOAuthActivity : AppCompatActivity() {
 }
 
 private fun failWithMissingServerClientId(): Nothing =
-    throw OAuthException("Could not sign in with Google, missing serverClientId.")
+    throw IllegalStateException("Could not sign in with Google, missing serverClientId.")
 
 private fun failWithMissingNonce(): Nothing =
-    throw OAuthException("Could not sign in with Google, missing nonce.")
+    throw IllegalStateException("Could not sign in with Google, missing nonce.")
 
 private fun failWithNoAccounts(): Nothing =
     throw OAuthException("Could not sign in with Google, no Google Accounts found.")
