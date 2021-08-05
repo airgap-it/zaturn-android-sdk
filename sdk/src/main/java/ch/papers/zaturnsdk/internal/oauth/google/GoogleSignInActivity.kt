@@ -28,6 +28,7 @@ internal class GoogleSignInActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val serverClientId = intent.extras?.getString(EXTRA_SERVER_CLIENT_ID) ?: failWithMissingServerClientId()
+        val scopes = intent.extras?.getStringArrayList(EXTRA_SCOPES) ?: emptyList<String>()
         val nonce = intent.extras?.getString(EXTRA_NONCE) ?: failWithMissingNonce()
 
         idTokenDeferred = GoogleOAuth.instance().idTokenDeferred(serverClientId)
@@ -82,6 +83,7 @@ internal class GoogleSignInActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_SERVER_CLIENT_ID = "serverClientId"
+        const val EXTRA_SCOPES = "scopes"
         const val EXTRA_NONCE = "nonce"
     }
 }
