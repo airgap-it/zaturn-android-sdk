@@ -12,25 +12,27 @@ internal class GoogleOAuth private constructor() {
     private val idTokenDeferred: MutableMap<String, CompletableDeferred<String?>> = mutableMapOf()
     fun idTokenDeferred(serverClientId: String): CompletableDeferred<String?>? = idTokenDeferred[serverClientId]
 
-    suspend fun signIn(context: Context, clientId: String, serverClientId: String, nonce: String): String =
+    suspend fun signIn(context: Context, clientId: String, serverClientId: String, scopes: List<String>, nonce: String): String =
         withCredentialDeferred(serverClientId) {
-            appAuthSignIn(context, clientId, serverClientId, nonce)
+            appAuthSignIn(context, clientId, serverClientId, scopes, nonce)
             it.await()?: failWithMissingToken()
         }
 
-    private fun appAuthSignIn(context: Context, clientId: String, serverClientId: String, nonce: String) {
+    private fun appAuthSignIn(context: Context, clientId: String, serverClientId: String, scopes: List<String>, nonce: String) {
         val intent = Intent(context, AppAuthActivity::class.java).apply {
             putExtra(AppAuthActivity.EXTRA_CLIENT_ID, clientId)
             putExtra(AppAuthActivity.EXTRA_SERVER_CLIENT_ID, serverClientId)
+            putExtra(AppAuthActivity.EXTRA_SCOPES, ArrayList(scopes))
             putExtra(AppAuthActivity.EXTRA_NONCE, nonce)
         }
 
         context.startActivity(intent)
     }
 
-    private fun oneTapSignIn(context: Context, serverClientId: String, nonce: String) {
+    private fun oneTapSignIn(context: Context, serverClientId: String, scopes: List<String>, nonce: String) {
         val intent = Intent(context, GoogleSignInActivity::class.java).apply {
             putExtra(GoogleSignInActivity.EXTRA_SERVER_CLIENT_ID, serverClientId)
+            putExtra(GoogleSignInActivity.EXTRA_SCOPES, ArrayList(scopes))
             putExtra(GoogleSignInActivity.EXTRA_NONCE, nonce)
         }
         context.startActivity(intent)

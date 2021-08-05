@@ -9,16 +9,17 @@ internal class AppleOAuth {
     private val idTokenDeferred: MutableMap<String, CompletableDeferred<String?>> = mutableMapOf()
     fun idTokenDeferred(serverClientId: String): CompletableDeferred<String?>? = idTokenDeferred[serverClientId]
 
-    suspend fun signIn(context: Context, clientId: String, redirectUri: String, nonce: String): String =
+    suspend fun signIn(context: Context, clientId: String, redirectUri: String, scopes: List<String>, nonce: String): String =
         withCredentialDeferred(clientId) {
-            appAuthSignIn(context, clientId, redirectUri, nonce)
+            appAuthSignIn(context, clientId, redirectUri, scopes, nonce)
             it.await()?: failWithMissingToken()
         }
 
-    private fun appAuthSignIn(context: Context, clientId: String, redirectUri: String, nonce: String) {
+    private fun appAuthSignIn(context: Context, clientId: String, redirectUri: String, scopes: List<String>, nonce: String) {
         val intent = Intent(context, AppAuthActivity::class.java).apply {
             putExtra(AppAuthActivity.EXTRA_CLIENT_ID, clientId)
             putExtra(AppAuthActivity.EXTRA_REDIRECT_URI, redirectUri)
+            putExtra(AppAuthActivity.EXTRA_SCOPES, ArrayList(scopes))
             putExtra(AppAuthActivity.EXTRA_NONCE, nonce)
         }
 
