@@ -36,13 +36,14 @@ internal class AppAuthActivity : AppCompatActivity() {
 
         val clientId = intent.extras?.getString(EXTRA_CLIENT_ID) ?: failWithMissingClientId()
         val redirectUri = intent.extras?.getString(EXTRA_REDIRECT_URI) ?: failWithMissingRedirectUri()
+        val scopes = intent.extras?.getStringArrayList(EXTRA_SCOPES) ?: emptyList<String>()
         val nonce = intent.extras?.getString(EXTRA_NONCE) ?: failWithMissingNonce()
 
         idTokenDeferred = AppleOAuth.instance().idTokenDeferred(clientId)
 
         disposableHandles.addNotNull(idTokenDeferred?.invokeOnCompletion { finish() })
         idTokenDeferred?.catch {
-            appAuthSignIn(clientId, redirectUri, nonce)
+            appAuthSignIn(clientId, redirectUri, scopes, nonce)
         }
     }
 
@@ -51,7 +52,7 @@ internal class AppAuthActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun appAuthSignIn(clientId: String, redirectUri: String, nonce: String) {
+    private fun appAuthSignIn(clientId: String, redirectUri: String, scopes: List<String>, nonce: String) {
         val configuration = AuthorizationServiceConfiguration(authorizationEndpoint, tokenEndpoint)
         val authorizationRequest = AuthorizationRequest.Builder(
             configuration,
@@ -59,7 +60,12 @@ internal class AppAuthActivity : AppCompatActivity() {
             ResponseTypeValues.CODE,
             Uri.parse(redirectUri),
         ).apply {
-            setScope("${AuthorizationRequest.Scope.OPENID} ${AuthorizationRequest.Scope.EMAIL}")
+            val scopes = setOf(
+                AuthorizationRequest.Scope.OPENID,
+                AuthorizationRequest.Scope.EMAIL,
+            ) + scopes.toSet()
+
+            setScope(scopes.joinToString(" "))
             setNonce(nonce)
             setResponseMode("form_post")
         }.build()
@@ -94,6 +100,7 @@ internal class AppAuthActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_CLIENT_ID = "clientId"
         const val EXTRA_REDIRECT_URI = "redirectUri"
+        const val EXTRA_SCOPES = "scopes"
         const val EXTRA_NONCE = "nonce"
 
         private const val AUTHORIZATION_ENDPOINT = "https://appleid.apple.com/auth/authorize"
