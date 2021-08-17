@@ -12,7 +12,7 @@ android {
         minSdkVersion 23
         targetSdkVersion 30
         versionCode 1
-        versionName "0.0.2"
+        versionName "0.0.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -40,15 +40,15 @@ android {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.6.0'
-    implementation 'androidx.appcompat:appcompat:1.3.0'
+    implementation 'androidx.appcompat:appcompat:1.3.1'
     implementation 'com.google.android.material:material:1.4.0'
 
     // Activity
-    def activity_version = "1.2.3"
+    def activity_version = "1.3.1"
     implementation "androidx.activity:activity-ktx:$activity_version"
 
     // Fragment
-    def fragment_version = "1.3.5"
+    def fragment_version = "1.3.6"
     implementation "androidx.fragment:fragment-ktx:$fragment_version"
 
     // Coroutines
@@ -63,11 +63,11 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$serialization_version"
 
     // Google Play Services
-    def play_services_version = "19.0.0"
+    def play_services_version = "19.2.0"
     implementation "com.google.android.gms:play-services-auth:$play_services_version"
 
     // AppAuth
-    def app_auth_version = "0.9.1"
+    def app_auth_version = "0.10.0"
     implementation "net.openid:appauth:$app_auth_version"
 
     // Ktor

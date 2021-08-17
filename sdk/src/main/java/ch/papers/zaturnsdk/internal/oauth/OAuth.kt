@@ -12,7 +12,22 @@ internal class OAuth(
 ) {
     suspend fun signIn(context: Context, nonce: String, provider: OAuthProvider): String =
         when (provider) {
-            is OAuthProvider.Apple -> appleOAuth.signIn(context, provider.clientId, provider.redirectUri, provider.scopes, nonce)
-            is OAuthProvider.Google -> googleOAuth.signIn(context, provider.clientId, provider.serverClientId, provider.scopes, nonce)
+            is OAuthProvider.Apple -> appleOAuth.signIn(
+                context,
+                provider.clientId,
+                provider.serverClientId,
+                provider.redirectUri,
+                provider.responseTypes,
+                provider.responseMode,
+                provider.scopes,
+                nonce
+            )
+            is OAuthProvider.Google -> googleOAuth.signIn(
+                context,
+                provider.clientId,
+                provider.serverClientId,
+                provider.scopes,
+                nonce
+            )
         }
 }
