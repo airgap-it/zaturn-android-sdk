@@ -7,16 +7,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import ch.papers.zaturnsdk.internal.oauth.exception.OAuthException
-import ch.papers.zaturnsdk.internal.oauth.google.AppAuthActivity
-import ch.papers.zaturnsdk.internal.util.addNotNull
-import ch.papers.zaturnsdk.internal.util.catch
-import ch.papers.zaturnsdk.internal.util.tryComplete
+import ch.papers.zaturnsdk.internal.util.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import net.openid.appauth.*
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 internal class AppAuthActivity : AppCompatActivity() {
     private var idTokenDeferred: CompletableDeferred<String?>? = null
@@ -35,7 +32,10 @@ internal class AppAuthActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val clientId = intent.extras?.getString(EXTRA_CLIENT_ID) ?: failWithMissingClientId()
+        val serverClientId = intent.extras?.getString(EXTRA_SERVER_CLIENT_ID) ?: failWithMissingServerClientId()
         val redirectUri = intent.extras?.getString(EXTRA_REDIRECT_URI) ?: failWithMissingRedirectUri()
+        val responseTypes = intent.extras?.getStringArrayList(EXTRA_RESPONSE_TYPES) ?: failWithMissingResponseTypes()
+        val responseMode = intent.extras?.getString(EXTRA_RESPONSE_MODE) ?: failWithMissingResponseMode()
         val scopes = intent.extras?.getStringArrayList(EXTRA_SCOPES) ?: emptyList<String>()
         val nonce = intent.extras?.getString(EXTRA_NONCE) ?: failWithMissingNonce()
 
@@ -43,7 +43,7 @@ internal class AppAuthActivity : AppCompatActivity() {
 
         disposableHandles.addNotNull(idTokenDeferred?.invokeOnCompletion { finish() })
         idTokenDeferred?.catch {
-            appAuthSignIn(clientId, redirectUri, scopes, nonce)
+            appAuthSignIn(clientId, serverClientId, redirectUri, scopes, responseTypes, responseMode, nonce)
         }
     }
 
@@ -52,67 +52,146 @@ internal class AppAuthActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    private fun appAuthSignIn(clientId: String, redirectUri: String, scopes: List<String>, nonce: String) {
+    private fun appAuthSignIn(
+        clientId: String,
+        serverClientId: String,
+        redirectUri: String,
+        scopes: List<String>,
+        responseTypes: List<String>,
+        responseMode: String,
+        nonce: String
+    ) {
         val configuration = AuthorizationServiceConfiguration(authorizationEndpoint, tokenEndpoint)
         val authorizationRequest = AuthorizationRequest.Builder(
             configuration,
-            clientId,
+            serverClientId,
             ResponseTypeValues.CODE,
             Uri.parse(redirectUri),
         ).apply {
             val scopes = setOf(
                 AuthorizationRequest.Scope.OPENID,
-                AuthorizationRequest.Scope.EMAIL,
             ) + scopes.toSet()
 
-            setScope(scopes.joinToString(" "))
+            setScope(scopes)
+            setResponseType(responseTypes.toSet())
+            setResponseMode(responseMode)
             setNonce(nonce)
-            setResponseMode("form_post")
         }.build()
 
-        authorize(authorizationRequest)
+        authorize(clientId, serverClientId, authorizationRequest)
     }
 
-    private fun authorize(request: AuthorizationRequest) {
+    private fun authorize(clientId: String, serverClientId: String, request: AuthorizationRequest) {
         val intent = authorizationService.getAuthorizationRequestIntent(request)
 
-        val authorize = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            idTokenDeferred?.tryComplete {
-                when (it.resultCode) {
-                    Activity.RESULT_OK -> {
-                        val data = it.data ?: failWithSignInFailure()
+        val authorize =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                idTokenDeferred?.catch {
+                    when (it.resultCode) {
+                        Activity.RESULT_OK -> {
+                            val data = it.data ?: failWithSignInFailure()
 
-                        val response = AuthorizationResponse.fromIntent(data)
-                        val exception = AuthorizationException.fromIntent(data)
+                            val response = AuthorizationResponse.fromIntent(data)
+                            val exception = AuthorizationException.fromIntent(data)
 
-                        if (exception != null || response == null) failWithSignInFailure(exception)
+                            if (exception != null || response == null) failWithSignInFailure(
+                                exception
+                            )
 
-                        response.idToken
+                            getIdToken(clientId, serverClientId, response)
+                        }
+                        else -> failWithSignInFailure()
                     }
-                    else -> failWithSignInFailure()
                 }
             }
-        }
 
         authorize.launch(intent)
     }
 
+    private fun getIdToken(
+        clientId: String,
+        serverClientId: String,
+        response: AuthorizationResponse
+    ) {
+        response.idToken?.let { idTokenDeferred?.complete(it) } ?: exchangeToken(
+            clientId,
+            serverClientId,
+            response
+        )
+    }
+
+    private fun exchangeToken(
+        clientId: String,
+        serverClientId: String,
+        response: AuthorizationResponse
+    ) {
+        val request = with(response) {
+            TokenRequest.Builder(request.configuration, clientId).apply {
+                val additionalParameters = mapOf(
+                    PARAMETER_AUDIENCE to (request.additionalParameters[PARAMETER_AUDIENCE]
+                        ?: serverClientId),
+                    PARAMETER_CLIENT_SECRET to response.additionalParameters[PARAMETER_CLIENT_SECRET]
+                ).filterValues { it != null }
+
+                setGrantType(GrantTypeValues.AUTHORIZATION_CODE)
+                setRedirectUri(request.redirectUri)
+                setCodeVerifier(request.codeVerifier)
+                setAuthorizationCode(authorizationCode)
+                setAdditionalParameters(additionalParameters)
+                setNonce(request.nonce)
+            }.build()
+        }
+        lifecycleScope.launch { exchangeToken(request) }
+    }
+
+    private suspend fun exchangeToken(request: TokenRequest) {
+        idTokenDeferred?.tryComplete {
+            val token = suspendCancellableCoroutine<String?> {
+                authorizationService.performTokenRequest(request) { response, exception ->
+                    try {
+                        if (exception != null || response == null) failWithSignInFailure(exception)
+                        it.resume(response.idToken)
+                    } catch (e: Exception) {
+                        it.cancel(e)
+                    }
+                }
+            }
+
+            token
+        }
+    }
+
     companion object {
         const val EXTRA_CLIENT_ID = "clientId"
+        const val EXTRA_SERVER_CLIENT_ID = "serverClientId"
         const val EXTRA_REDIRECT_URI = "redirectUri"
+        const val EXTRA_RESPONSE_TYPES = "responseTypes"
+        const val EXTRA_RESPONSE_MODE = "responseMode"
         const val EXTRA_SCOPES = "scopes"
         const val EXTRA_NONCE = "nonce"
 
+        private const val PARAMETER_AUDIENCE = "audience"
+        private const val PARAMETER_CLIENT_SECRET = "client_secret"
+
         private const val AUTHORIZATION_ENDPOINT = "https://appleid.apple.com/auth/authorize"
-        private const val TOKEN_ENDPOINT = ""
+        private const val TOKEN_ENDPOINT = "https://appleid.apple.com/auth/token"
     }
 }
 
 private fun failWithMissingClientId(): Nothing =
     throw IllegalStateException("Could not sign in with Apple, missing clientId.")
 
+private fun failWithMissingServerClientId(): Nothing =
+    throw IllegalStateException("Could not sign in with Apple, missing serverClientId.")
+
 private fun failWithMissingRedirectUri(): Nothing =
     throw IllegalStateException("Could not sign in with Apple, missing redirectUri.")
+
+private fun failWithMissingResponseTypes(): Nothing =
+    throw IllegalStateException("Could not sign in with Apple, missing responseTypes.")
+
+private fun failWithMissingResponseMode(): Nothing =
+    throw IllegalStateException("Could not sign in with Apple, missing responseMode.")
 
 private fun failWithMissingNonce(): Nothing =
     throw IllegalStateException("Could not sign in with Apple, missing nonce.")
