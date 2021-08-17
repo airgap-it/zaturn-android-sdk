@@ -24,20 +24,13 @@
             android:theme="@style/Theme.Transparent" />
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
-            tools:node="replace">
+            tools:node="replace"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="@string/google_client_id_reversed"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="@string/apple_redirect_uri_scheme"
-                    android:host="@string/apple_redirect_uri_host"
-                    android:pathPrefix="@string/apple_redirect_uri_prefix"/>
+                <data android:scheme="ch.papers.zaturn"/>
             </intent-filter>
         </activity>
     </application>

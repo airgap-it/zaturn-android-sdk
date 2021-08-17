@@ -9,13 +9,14 @@ import androidx.lifecycle.lifecycleScope
 import ch.papers.zaturnsdk.internal.oauth.exception.OAuthException
 import ch.papers.zaturnsdk.internal.util.addNotNull
 import ch.papers.zaturnsdk.internal.util.catch
+import ch.papers.zaturnsdk.internal.util.setScope
 import ch.papers.zaturnsdk.internal.util.tryComplete
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.DisposableHandle
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import net.openid.appauth.*
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 internal class AppAuthActivity : AppCompatActivity() {
     private var idTokenDeferred: CompletableDeferred<String?>? = null
@@ -68,7 +69,7 @@ internal class AppAuthActivity : AppCompatActivity() {
             redirectUrl(clientId),
         ).apply {
             val additionalParameters = mapOf(
-                "audience" to serverClientId,
+                PARAMETER_AUDIENCE to serverClientId,
             )
 
             val scopes = setOf(
@@ -76,7 +77,8 @@ internal class AppAuthActivity : AppCompatActivity() {
                 AuthorizationRequest.Scope.EMAIL,
             ) + scopes.toSet()
 
-            setScope(scopes.joinToString(" "))
+            setScope(scopes)
+            setResponseType(ResponseTypeValues.CODE)
             setAdditionalParameters(additionalParameters)
             setNonce(nonce)
         }.build()
@@ -98,7 +100,7 @@ internal class AppAuthActivity : AppCompatActivity() {
 
                         if (exception != null || response == null) failWithSignInFailure(exception)
 
-                        exchangeToken(response)
+                        getIdToken(response)
                     }
                     else -> failWithSignInFailure()
                 }
@@ -108,17 +110,27 @@ internal class AppAuthActivity : AppCompatActivity() {
         authorize.launch(intent)
     }
 
+    private fun getIdToken(response: AuthorizationResponse) {
+        response.idToken?.let { idTokenDeferred?.complete(it) } ?: exchangeToken(response)
+    }
+
     private fun exchangeToken(response: AuthorizationResponse) {
-        val request = response.createTokenExchangeRequest()
+        val request = response.createTokenExchangeRequest(mapOf(
+            PARAMETER_AUDIENCE to response.request.additionalParameters[PARAMETER_AUDIENCE],
+        ).filterValues { it != null })
         lifecycleScope.launch { exchangeToken(request) }
     }
 
     private suspend fun exchangeToken(request: TokenRequest) {
         idTokenDeferred?.tryComplete {
-            val token = suspendCoroutine<String?> {
+            val token = suspendCancellableCoroutine<String?> {
                 authorizationService.performTokenRequest(request) { response, exception ->
-                    if (exception != null || response == null) failWithSignInFailure(exception)
-                    it.resume(response.idToken)
+                    try {
+                        if (exception != null || response == null) failWithSignInFailure(exception)
+                        it.resume(response.idToken)
+                    } catch (e: Exception) {
+                        it.cancel(e)
+                    }
                 }
             }
 
@@ -134,6 +146,8 @@ internal class AppAuthActivity : AppCompatActivity() {
 
         private const val AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
         private const val TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+
+        private const val PARAMETER_AUDIENCE = "audience"
 
         private const val OAUTH2_CALLBACK_PATH = "/oauth2callback"
     }
