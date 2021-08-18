@@ -22,6 +22,7 @@
             android:name=".internal.oauth.google.GoogleSignInActivity"
             android:windowSoftInputMode="stateHidden"
             android:theme="@style/Theme.Transparent" />
+        <activity android:name=".oauth.OAuthRedirectActivity" />
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
             tools:node="replace"
