@@ -3,25 +3,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="ch.papers.zaturnsdk">
 
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.ZaturnSDK">
+    <application>
         <activity
             android:name=".internal.oauth.apple.AppAuthActivity"
             android:windowSoftInputMode="stateHidden"
-            android:theme="@style/Theme.Transparent" />
+            android:theme="@style/Zaturn.Theme.Transparent" />
         <activity
             android:name=".internal.oauth.google.AppAuthActivity"
             android:windowSoftInputMode="stateHidden"
-            android:theme="@style/Theme.Transparent" />
+            android:theme="@style/Zaturn.Theme.Transparent" />
         <activity
             android:name=".internal.oauth.google.GoogleSignInActivity"
             android:windowSoftInputMode="stateHidden"
-            android:theme="@style/Theme.Transparent" />
+            android:theme="@style/Zaturn.Theme.Transparent" />
         <activity android:name=".oauth.OAuthRedirectActivity" />
         <activity
             android:name="net.openid.appauth.RedirectUriReceiverActivity"
