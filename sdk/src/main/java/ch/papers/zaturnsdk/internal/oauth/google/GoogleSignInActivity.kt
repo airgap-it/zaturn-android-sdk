@@ -6,9 +6,11 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import ch.papers.zaturnsdk.data.OAuthId
 import ch.papers.zaturnsdk.internal.oauth.exception.OAuthException
 import ch.papers.zaturnsdk.internal.util.addNotNull
 import ch.papers.zaturnsdk.internal.util.catch
+import ch.papers.zaturnsdk.internal.util.toOAuthId
 import ch.papers.zaturnsdk.internal.util.tryComplete
 import com.google.android.gms.auth.api.identity.BeginSignInRequest
 import com.google.android.gms.auth.api.identity.BeginSignInResult
@@ -20,7 +22,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 internal class GoogleSignInActivity : AppCompatActivity() {
-    private var idTokenDeferred: CompletableDeferred<String?>? = null
+    private var idDeferred: CompletableDeferred<OAuthId?>? = null
 
     private val disposableHandles: MutableList<DisposableHandle> = mutableListOf()
 
@@ -31,11 +33,11 @@ internal class GoogleSignInActivity : AppCompatActivity() {
         val scopes = intent.extras?.getStringArrayList(EXTRA_SCOPES) ?: emptyList<String>()
         val nonce = intent.extras?.getString(EXTRA_NONCE) ?: failWithMissingNonce()
 
-        idTokenDeferred = GoogleOAuth.instance().idTokenDeferred(serverClientId)
+        idDeferred = GoogleOAuth.instance().idDeferred(serverClientId)
 
-        disposableHandles.addNotNull(idTokenDeferred?.invokeOnCompletion { finish() })
+        disposableHandles.addNotNull(idDeferred?.invokeOnCompletion { finish() })
         lifecycleScope.launch {
-            idTokenDeferred?.catch {
+            idDeferred?.catch {
                 oneTapSignIn(serverClientId, nonce)
             }
         }
@@ -63,9 +65,9 @@ internal class GoogleSignInActivity : AppCompatActivity() {
         }.build()
 
         val startIntentSenderForResult = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
-            idTokenDeferred?.tryComplete {
+            idDeferred?.tryComplete {
                 when (it.resultCode) {
-                    Activity.RESULT_OK -> oneTapClient.getSignInCredentialFromIntent(it.data)?.googleIdToken
+                    Activity.RESULT_OK -> oneTapClient.getSignInCredentialFromIntent(it.data).toOAuthId()
                     else -> failWithSignInFailure()
                 }
             }

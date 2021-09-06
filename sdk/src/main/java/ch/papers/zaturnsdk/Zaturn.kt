@@ -2,6 +2,7 @@ package ch.papers.zaturnsdk
 
 import android.content.Context
 import androidx.annotation.IntRange
+import ch.papers.zaturnsdk.data.OAuthId
 import ch.papers.zaturnsdk.data.OAuthProvider
 import ch.papers.zaturnsdk.exception.ZaturnException
 import ch.papers.zaturnsdk.internal.ZaturnConfiguration
@@ -37,7 +38,7 @@ public class Zaturn internal constructor(
         get() = catchInternal { keyPair.publicKey.encodeToBase64() }
 
     @Throws(ZaturnException::class)
-    public suspend fun getOAuthToken(context: Context, oAuthProvider: OAuthProvider): String =
+    public suspend fun getOAuthToken(context: Context, oAuthProvider: OAuthProvider): OAuthId =
         catchInternal { oAuth.signIn(context, nonce, oAuthProvider) }
 
     @Throws(ZaturnException::class)

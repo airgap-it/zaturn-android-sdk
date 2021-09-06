@@ -7,6 +7,11 @@ import kotlinx.coroutines.launch
 
 internal fun <T> MutableList<T>.addNotNull(element: T?): Boolean = if (element != null) add(element) else false
 
+internal fun <K, V> Map<K, V?>.filterValuesNotNull(): Map<K, V> =
+    mutableMapOf<K, V>().apply {
+        for (entry in entries) entry.value?.let { put(entry.key, it) }
+    }
+
 internal suspend fun <T> List<T>.launch(block: suspend (T) -> Unit) {
     coroutineScope {
         forEach {
@@ -27,7 +32,7 @@ internal suspend fun <T, R> List<T>.async(block: suspend (T) -> R): List<R> =
     coroutineScope {
         map {
             async { block(it) }
-        }
+        }.filterNotNull()
     }.awaitAll()
 
 internal suspend fun <T, R> List<T>.asyncIndexed(block: suspend (index: Int, T) -> R): List<R> =

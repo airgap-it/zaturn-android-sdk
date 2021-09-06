@@ -2,17 +2,15 @@ package ch.papers.zaturnsdk.internal.oauth.google
 
 import android.content.Context
 import android.content.Intent
-import ch.papers.zaturnsdk.data.OAuthProvider
-import ch.papers.zaturnsdk.internal.oauth.OAuth
+import ch.papers.zaturnsdk.data.OAuthId
 import ch.papers.zaturnsdk.internal.oauth.exception.OAuthException
-import com.google.android.gms.auth.api.identity.SignInCredential
 import kotlinx.coroutines.CompletableDeferred
 
 internal class GoogleOAuth private constructor() {
-    private val idTokenDeferred: MutableMap<String, CompletableDeferred<String?>> = mutableMapOf()
-    fun idTokenDeferred(serverClientId: String): CompletableDeferred<String?>? = idTokenDeferred[serverClientId]
+    private val idDeferred: MutableMap<String, CompletableDeferred<OAuthId?>> = mutableMapOf()
+    fun idDeferred(serverClientId: String): CompletableDeferred<OAuthId?>? = idDeferred[serverClientId]
 
-    suspend fun signIn(context: Context, clientId: String, serverClientId: String, scopes: List<String>, nonce: String): String =
+    suspend fun signIn(context: Context, clientId: String, serverClientId: String, scopes: List<String>, nonce: String): OAuthId =
         withCredentialDeferred(serverClientId) {
             appAuthSignIn(context, clientId, serverClientId, scopes, nonce)
             it.await()?: failWithMissingToken()
@@ -38,11 +36,11 @@ internal class GoogleOAuth private constructor() {
         context.startActivity(intent)
     }
 
-    private inline fun <T> withCredentialDeferred(serverClientId: String, action: (CompletableDeferred<String?>) -> T): T {
-        val deferred = CompletableDeferred<String?>()
-        idTokenDeferred[serverClientId] = deferred
+    private inline fun <T> withCredentialDeferred(serverClientId: String, action: (CompletableDeferred<OAuthId?>) -> T): T {
+        val deferred = CompletableDeferred<OAuthId?>()
+        idDeferred[serverClientId] = deferred
         val result = action(deferred)
-        idTokenDeferred.remove(serverClientId)
+        idDeferred.remove(serverClientId)
 
         return result
     }
