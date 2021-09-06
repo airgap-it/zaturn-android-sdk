@@ -2,13 +2,14 @@ package ch.papers.zaturnsdk.internal.oauth.apple
 
 import android.content.Context
 import android.content.Intent
+import ch.papers.zaturnsdk.data.OAuthId
 import ch.papers.zaturnsdk.internal.oauth.exception.OAuthException
 import kotlinx.coroutines.CompletableDeferred
 
 internal class AppleOAuth {
-    private val idTokenDeferred: MutableMap<String, CompletableDeferred<String?>> = mutableMapOf()
-    fun idTokenDeferred(serverClientId: String): CompletableDeferred<String?>? =
-        idTokenDeferred[serverClientId]
+    private val idDeferred: MutableMap<String, CompletableDeferred<OAuthId?>> = mutableMapOf()
+    fun idDeferred(serverClientId: String): CompletableDeferred<OAuthId?>? =
+        idDeferred[serverClientId]
 
     suspend fun signIn(
         context: Context,
@@ -19,7 +20,7 @@ internal class AppleOAuth {
         responseMode: String,
         scopes: List<String>,
         nonce: String,
-    ): String =
+    ): OAuthId =
         withCredentialDeferred(clientId) {
             appAuthSignIn(context, clientId, serverClientId, redirectUri, responseTypes, responseMode, scopes, nonce)
             it.await() ?: failWithMissingToken()
@@ -50,12 +51,12 @@ internal class AppleOAuth {
 
     private inline fun <T> withCredentialDeferred(
         serverClientId: String,
-        action: (CompletableDeferred<String?>) -> T
+        action: (CompletableDeferred<OAuthId?>) -> T
     ): T {
-        val deferred = CompletableDeferred<String?>()
-        idTokenDeferred[serverClientId] = deferred
+        val deferred = CompletableDeferred<OAuthId?>()
+        idDeferred[serverClientId] = deferred
         val result = action(deferred)
-        idTokenDeferred.remove(serverClientId)
+        idDeferred.remove(serverClientId)
 
         return result
     }
