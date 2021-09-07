@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import ch.papers.zaturnsdk.data.OAuthId
 import ch.papers.zaturnsdk.internal.oauth.exception.OAuthException
 import ch.papers.zaturnsdk.internal.util.*
 import kotlinx.coroutines.CompletableDeferred
@@ -16,7 +17,7 @@ import net.openid.appauth.*
 import kotlin.coroutines.resume
 
 internal class AppAuthActivity : AppCompatActivity() {
-    private var idTokenDeferred: CompletableDeferred<String?>? = null
+    private var idDeferred: CompletableDeferred<OAuthId?>? = null
 
     private val disposableHandles: MutableList<DisposableHandle> = mutableListOf()
 
@@ -39,10 +40,10 @@ internal class AppAuthActivity : AppCompatActivity() {
         val scopes = intent.extras?.getStringArrayList(EXTRA_SCOPES) ?: emptyList<String>()
         val nonce = intent.extras?.getString(EXTRA_NONCE) ?: failWithMissingNonce()
 
-        idTokenDeferred = AppleOAuth.instance().idTokenDeferred(clientId)
+        idDeferred = AppleOAuth.instance().idDeferred(clientId)
 
-        disposableHandles.addNotNull(idTokenDeferred?.invokeOnCompletion { finish() })
-        idTokenDeferred?.catch {
+        disposableHandles.addNotNull(idDeferred?.invokeOnCompletion { finish() })
+        idDeferred?.catch {
             appAuthSignIn(clientId, serverClientId, redirectUri, scopes, responseTypes, responseMode, nonce)
         }
     }
@@ -86,7 +87,7 @@ internal class AppAuthActivity : AppCompatActivity() {
 
         val authorize =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-                idTokenDeferred?.catch {
+                idDeferred?.catch {
                     when (it.resultCode) {
                         Activity.RESULT_OK -> {
                             val data = it.data ?: failWithSignInFailure()
@@ -98,7 +99,7 @@ internal class AppAuthActivity : AppCompatActivity() {
                                 exception
                             )
 
-                            getIdToken(clientId, serverClientId, response)
+                            getId(clientId, serverClientId, response)
                         }
                         else -> failWithSignInFailure()
                     }
@@ -108,12 +109,12 @@ internal class AppAuthActivity : AppCompatActivity() {
         authorize.launch(intent)
     }
 
-    private fun getIdToken(
+    private fun getId(
         clientId: String,
         serverClientId: String,
         response: AuthorizationResponse
     ) {
-        response.idToken?.let { idTokenDeferred?.complete(it) } ?: exchangeToken(
+        response.toOAuthId()?.let { idDeferred?.complete(it) } ?: exchangeToken(
             clientId,
             serverClientId,
             response
@@ -145,19 +146,19 @@ internal class AppAuthActivity : AppCompatActivity() {
     }
 
     private suspend fun exchangeToken(request: TokenRequest) {
-        idTokenDeferred?.tryComplete {
-            val token = suspendCancellableCoroutine<String?> {
+        idDeferred?.tryComplete {
+            val id = suspendCancellableCoroutine<OAuthId?> {
                 authorizationService.performTokenRequest(request) { response, exception ->
                     try {
                         if (exception != null || response == null) failWithSignInFailure(exception)
-                        it.resume(response.idToken)
+                        it.resume(response.toOAuthId())
                     } catch (e: Exception) {
                         it.cancel(e)
                     }
                 }
             }
 
-            token
+            id
         }
     }
 

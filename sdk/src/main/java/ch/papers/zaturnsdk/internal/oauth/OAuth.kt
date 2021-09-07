@@ -1,6 +1,7 @@
 package ch.papers.zaturnsdk.internal.oauth
 
 import android.content.Context
+import ch.papers.zaturnsdk.data.OAuthId
 import ch.papers.zaturnsdk.data.OAuthProvider
 import ch.papers.zaturnsdk.internal.crypto.data.PublicKey
 import ch.papers.zaturnsdk.internal.oauth.apple.AppleOAuth
@@ -10,7 +11,7 @@ internal class OAuth(
     private val appleOAuth: AppleOAuth = AppleOAuth.instance(),
     private val googleOAuth: GoogleOAuth = GoogleOAuth.instance()
 ) {
-    suspend fun signIn(context: Context, nonce: String, provider: OAuthProvider): String =
+    suspend fun signIn(context: Context, nonce: String, provider: OAuthProvider): OAuthId =
         when (provider) {
             is OAuthProvider.Apple -> appleOAuth.signIn(
                 context,
