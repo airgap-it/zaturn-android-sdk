@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 31
     buildToolsVersion "30.0.3"
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 31
         versionCode 4
         versionName "0.0.6"
 
@@ -52,7 +52,7 @@ dependencies {
     implementation "androidx.fragment:fragment-ktx:$fragment_version"
 
     // Coroutines
-    def coroutines_version = "1.5.0"
+    def coroutines_version = "1.5.1"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"
 
     // Reflection
@@ -71,7 +71,7 @@ dependencies {
     implementation "net.openid:appauth:$app_auth_version"
 
     // Ktor
-    def ktor_version = "1.6.0"
+    def ktor_version = "1.6.2"
     implementation "io.ktor:ktor-client-okhttp:$ktor_version"
     implementation "io.ktor:ktor-client-serialization:$ktor_version"
     implementation "io.ktor:ktor-client-logging:$ktor_version"
