@@ -2,6 +2,7 @@ package ch.papers.zaturnsdk.internal.network
 
 import ch.papers.zaturnsdk.internal.crypto.data.PublicKey
 import ch.papers.zaturnsdk.internal.network.data.publickey.GetPublicKeyResponse
+import ch.papers.zaturnsdk.internal.network.data.storage.CheckRecoveryPartResponse
 import ch.papers.zaturnsdk.internal.network.data.storage.RetrieveRecoveryPartResponse
 import ch.papers.zaturnsdk.internal.network.data.storage.StoreRecoveryPartRequest
 import ch.papers.zaturnsdk.internal.network.data.storage.StoreRecoveryPartResponse
@@ -25,6 +26,16 @@ internal class ZaturnNode(val id: String, private val http: Http) {
             )
         }
     }
+
+    suspend fun checkRecoveryParts(token: String, id: String, partsCount: Int): List<Boolean> =
+        (0 until partsCount).toList().async {
+            runCatching {
+                http.head<CheckRecoveryPartResponse>(
+                    "/storage/$id-$it",
+                    listOf(Token(token))
+                )
+            }.isSuccess
+        }
 
     suspend fun retrieveRecoveryParts(token: String, id: String, partsCount: Int): List<ByteArray> =
         (0 until partsCount).toList().async {

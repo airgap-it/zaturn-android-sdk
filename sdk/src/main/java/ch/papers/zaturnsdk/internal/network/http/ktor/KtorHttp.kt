@@ -67,6 +67,13 @@ internal class KtorHttp(baseUrl: String) : Http(baseUrl) {
         requestBody?.let { body = it }
     }
 
+    override suspend fun <T : Any> head(
+        endpoint: String,
+        headers: List<HttpHeader>,
+        parameters: List<HttpParameter>,
+        responseClass: KClass<T>
+    ): T = request(HttpMethod.Head, endpoint, headers, parameters, responseClass)
+
     @Suppress("UNCHECKED_CAST")
     private suspend inline fun <T : Any> request(
         method: HttpMethod,
