@@ -18,6 +18,12 @@ internal abstract class Http(protected val baseUrl: String) {
         parameters: List<HttpParameter> = emptyList(),
     ): R = post(endpoint, body, headers, parameters, T::class, R::class)
 
+    suspend inline fun <reified T : Any> head(
+        endpoint: String,
+        headers: List<HttpHeader> = emptyList(),
+        parameters: List<HttpParameter> = emptyList(),
+    ): T = head(endpoint, headers, parameters, T::class)
+
     protected abstract suspend fun <T : Any> get(
         endpoint: String,
         headers: List<HttpHeader>,
@@ -33,4 +39,11 @@ internal abstract class Http(protected val baseUrl: String) {
         bodyClass: KClass<T>,
         responseClass: KClass<R>,
     ): R
+
+    protected abstract suspend fun <T : Any> head(
+        endpoint: String,
+        headers: List<HttpHeader>,
+        parameters: List<HttpParameter>,
+        responseClass: KClass<T>,
+    ): T
 }

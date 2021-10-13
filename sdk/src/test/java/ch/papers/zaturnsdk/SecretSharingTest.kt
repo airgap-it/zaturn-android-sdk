@@ -4,12 +4,7 @@ import ch.papers.zaturnsdk.internal.secret.SecretSharingGroup
 import ch.papers.zaturnsdk.internal.secret.sskr.SskrSecretSharing
 import org.junit.Test
 
-/**
- * Example local unit test, which will execute on the development machine (host).
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
-class SecretSharingTest {
+internal class SecretSharingTest {
     @Test
     fun test() {
         val sskr = SskrSecretSharing()

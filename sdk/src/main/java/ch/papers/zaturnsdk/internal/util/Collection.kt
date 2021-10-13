@@ -8,8 +8,8 @@ import kotlinx.coroutines.launch
 internal fun <T> MutableList<T>.addNotNull(element: T?): Boolean = if (element != null) add(element) else false
 
 internal fun <K, V> Map<K, V?>.filterValuesNotNull(): Map<K, V> =
-    mutableMapOf<K, V>().apply {
-        for (entry in entries) entry.value?.let { put(entry.key, it) }
+    mutableMapOf<K, V>().also { map ->
+        for (entry in entries) entry.value?.let { map.put(entry.key, it) }
     }
 
 internal suspend fun <T> List<T>.launch(block: suspend (T) -> Unit) {
