@@ -48,11 +48,19 @@ public class Zaturn internal constructor(
             storeRecoveryParts(id, token, parts)
         }
 
+    public suspend fun checkRecovery(id: String, token: String): Boolean {
+        val groups = checkRecoveryParts(id, token)
+            .map { groupMembers -> groupMembers.count { it } }
+            .count { it >= shareConfiguration.groupMemberThreshold }
+
+        return groups >= shareConfiguration.groupThreshold
+    }
+
     @Throws(ZaturnException::class)
     public suspend fun recover(id: String, token: String): ByteArray =
         catchInternal {
             val parts = retrieveRecoveryParts(id, token)
-            return restoreSecret(parts)
+            restoreSecret(parts)
         }
 
     private fun splitSecret(secret: ByteArray): List<List<ByteArray>> =
@@ -92,6 +100,11 @@ public class Zaturn internal constructor(
             node.storeRecoveryParts(token, id, encrypted)
         }
     }
+
+    private suspend fun checkRecoveryParts(id: String, token: String): List<List<Boolean>> =
+        nodes.async {
+            it.checkRecoveryParts(token, id, shareConfiguration.groupMembers)
+        }
 
     private suspend fun retrieveRecoveryParts(id: String, token: String): List<List<ByteArray>> =
         nodes.async {
