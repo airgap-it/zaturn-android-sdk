@@ -37,6 +37,8 @@ internal class AppleOAuth {
         nonce: String,
     ) {
         val intent = Intent(context, AppAuthActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
             putExtra(AppAuthActivity.EXTRA_CLIENT_ID, clientId)
             putExtra(AppAuthActivity.EXTRA_SERVER_CLIENT_ID, serverClientId)
             putExtra(AppAuthActivity.EXTRA_REDIRECT_URI, redirectUri)
