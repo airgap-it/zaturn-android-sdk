@@ -42,7 +42,7 @@ public class Zaturn internal constructor(
         catchInternal { oAuth.signIn(context, nonce, oAuthProvider) }
 
     @Throws(ZaturnException::class)
-    public suspend fun setupRecovery(id: String, secret: ByteArray, token: String) =
+    public suspend fun setupRecovery(id: String, secret: ByteArray, token: String): Unit =
         catchInternal {
             val parts = splitSecret(secret)
             storeRecoveryParts(id, token, parts)
