@@ -18,6 +18,8 @@ internal class GoogleOAuth private constructor() {
 
     private fun appAuthSignIn(context: Context, clientId: String, serverClientId: String, scopes: List<String>, nonce: String) {
         val intent = Intent(context, AppAuthActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
             putExtra(AppAuthActivity.EXTRA_CLIENT_ID, clientId)
             putExtra(AppAuthActivity.EXTRA_SERVER_CLIENT_ID, serverClientId)
             putExtra(AppAuthActivity.EXTRA_SCOPES, ArrayList(scopes))
@@ -29,6 +31,8 @@ internal class GoogleOAuth private constructor() {
 
     private fun oneTapSignIn(context: Context, serverClientId: String, scopes: List<String>, nonce: String) {
         val intent = Intent(context, GoogleSignInActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
             putExtra(GoogleSignInActivity.EXTRA_SERVER_CLIENT_ID, serverClientId)
             putExtra(GoogleSignInActivity.EXTRA_SCOPES, ArrayList(scopes))
             putExtra(GoogleSignInActivity.EXTRA_NONCE, nonce)
