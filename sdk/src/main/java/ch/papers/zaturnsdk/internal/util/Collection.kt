@@ -12,6 +12,9 @@ internal fun <K, V> Map<K, V?>.filterValuesNotNull(): Map<K, V> =
         for (entry in entries) entry.value?.let { map.put(entry.key, it) }
     }
 
+internal fun <T> List<Result<T>>.flatSuccess(): List<T> = mapNotNull { it.getOrNull() }
+internal fun <T, S> List<Result<T>>.flatMapSuccess(transform: (T) -> S): List<S> = mapNotNull { it.getOrNull()?.let(transform) }
+
 internal suspend fun <T> List<T>.launch(block: suspend (T) -> Unit) {
     coroutineScope {
         forEach {
