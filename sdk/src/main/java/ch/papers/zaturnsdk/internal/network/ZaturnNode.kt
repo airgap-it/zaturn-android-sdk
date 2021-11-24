@@ -9,6 +9,7 @@ import ch.papers.zaturnsdk.internal.network.data.storage.StoreRecoveryPartRespon
 import ch.papers.zaturnsdk.internal.network.http.Http
 import ch.papers.zaturnsdk.internal.network.http.data.Token
 import ch.papers.zaturnsdk.internal.util.async
+import ch.papers.zaturnsdk.internal.util.filterValuesNotNull
 import ch.papers.zaturnsdk.internal.util.launchIndexed
 
 internal class ZaturnNode(val id: String, private val http: Http) {
@@ -37,12 +38,14 @@ internal class ZaturnNode(val id: String, private val http: Http) {
             }.isSuccess
         }
 
-    suspend fun retrieveRecoveryParts(token: String, id: String, partsCount: Int): List<ByteArray> =
+    suspend fun retrieveRecoveryParts(token: String, id: String, partsCount: Int): List<Result<ByteArray>> =
         (0 until partsCount).toList().async {
-            val response = http.get<RetrieveRecoveryPartResponse>(
-                "/storage/$id-$it",
-                listOf(Token(token))
-            )
-            response.data
+            runCatching {
+                val response = http.get<RetrieveRecoveryPartResponse>(
+                    "/storage/$id-$it",
+                    listOf(Token(token))
+                )
+                response.data
+            }
         }
 }

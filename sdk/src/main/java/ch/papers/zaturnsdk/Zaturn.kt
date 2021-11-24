@@ -17,6 +17,7 @@ import ch.papers.zaturnsdk.internal.oauth.OAuth
 import ch.papers.zaturnsdk.internal.secret.SecretSharing
 import ch.papers.zaturnsdk.internal.secret.SecretSharingGroup
 import ch.papers.zaturnsdk.internal.secret.sskr.SskrSecretSharing
+import ch.papers.zaturnsdk.internal.util.*
 import ch.papers.zaturnsdk.internal.util.async
 import ch.papers.zaturnsdk.internal.util.encodeToBase64
 import ch.papers.zaturnsdk.internal.util.launch
@@ -59,7 +60,7 @@ public class Zaturn internal constructor(
     @Throws(ZaturnException::class)
     public suspend fun recover(id: String, token: String): ByteArray =
         catchInternal {
-            val parts = retrieveRecoveryParts(id, token)
+            val parts = retrieveRecoveryParts(id, token).also { assertGroupThreshold(it) }
             restoreSecret(parts)
         }
 
@@ -71,8 +72,11 @@ public class Zaturn internal constructor(
             )
         }, shareConfiguration.groupThreshold)
 
-    private fun restoreSecret(parts: List<List<ByteArray>>): ByteArray =
-        secretSharing.join(parts)
+    private fun restoreSecret(parts: List<Result<List<Result<ByteArray>>>>): ByteArray {
+        val parts = parts.flatMapSuccess { it.flatSuccess() }
+
+        return secretSharing.join(parts)
+    }
 
     private suspend fun sessionKey(node: ZaturnNode): SessionKey =
         sessionKeys.getOrPut(node.id) {
@@ -85,9 +89,11 @@ public class Zaturn internal constructor(
         return parts.map { crypto.encryptWithSessionKey(it, sessionKey) }
     }
 
-    private suspend fun decryptParts(node: ZaturnNode, parts: List<ByteArray>): List<ByteArray> {
+    private suspend fun decryptParts(node: ZaturnNode, parts: List<Result<ByteArray>>): List<Result<ByteArray>> {
         val sessionKey = sessionKey(node)
-        return parts.map { crypto.decryptWithSessionKey(it, sessionKey) }
+        return parts.map { result ->
+            result.map { crypto.decryptWithSessionKey(it, sessionKey) }
+        }
     }
 
     private suspend fun storeRecoveryParts(
@@ -106,10 +112,12 @@ public class Zaturn internal constructor(
             it.checkRecoveryParts(token, id, shareConfiguration.groupMembers)
         }
 
-    private suspend fun retrieveRecoveryParts(id: String, token: String): List<List<ByteArray>> =
-        nodes.async {
-            val encrypted = it.retrieveRecoveryParts(token, id, shareConfiguration.groupMembers)
-            decryptParts(it, encrypted)
+    private suspend fun retrieveRecoveryParts(id: String, token: String): List<Result<List<Result<ByteArray>>>> =
+        nodes.async { node ->
+            runCatching {
+                val encrypted = node.retrieveRecoveryParts(token, id, shareConfiguration.groupMembers)
+                decryptParts(node, encrypted).also { assertGroupMemberThreshold(it) }
+            }
         }
 
     private inline fun <T> catchInternal(block: () -> T): T =
@@ -118,6 +126,22 @@ public class Zaturn internal constructor(
         } catch (e: ZaturnInternalException) {
             failWithInternalError(e)
         }
+
+    private fun assertGroupThreshold(parts: List<Result<List<Result<ByteArray>>>>) {
+        if (!parts.groupThresholdMet) failWithGroupThresholdNotMet(shareConfiguration.groupThreshold, parts)
+    }
+
+    private fun assertGroupMemberThreshold(decrypted: List<Result<ByteArray>>) {
+        if (!decrypted.groupMemberThresholdMet) failWithMemberThresholdNotMet(shareConfiguration.groupMemberThreshold, decrypted)
+    }
+
+    private val List<Result<List<Result<ByteArray>>>>.groupThresholdMet: Boolean
+        get() = thresholdMet(shareConfiguration.groupThreshold)
+
+    private val List<Result<ByteArray>>.groupMemberThresholdMet: Boolean
+        get() = thresholdMet(shareConfiguration.groupMemberThreshold)
+
+    private fun <T> List<Result<T>>.thresholdMet(threshold: Int): Boolean = count { it.isSuccess } >= threshold
 
     internal data class ShareConfiguration(
         val groups: Int,
@@ -184,3 +208,13 @@ internal fun failWithGroupThresholdExceeded(groups: Int, threshold: Int): Nothin
 
 internal fun failWithMemberThresholdExceeded(members: Int, threshold: Int): Nothing =
     throw ZaturnException("The member threshold ($threshold) exceeds the number of members ($members).")
+
+internal fun <T> failWithGroupThresholdNotMet(threshold: Int, parts: List<Result<T>>): Nothing {
+    throw parts.firstOrNull { it.exceptionOrNull() != null }?.exceptionOrNull()
+        ?: ZaturnException("The group threshold was not met (${parts.count { it.isSuccess }}/${threshold})")
+}
+
+internal fun <T> failWithMemberThresholdNotMet(threshold: Int, parts: List<Result<T>>): Nothing {
+    throw parts.firstOrNull { it.exceptionOrNull() != null }?.exceptionOrNull()
+        ?: ZaturnException("The member threshold was not met (${parts.count { it.isSuccess }}/${threshold})")
+}
