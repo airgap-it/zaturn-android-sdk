@@ -18,11 +18,7 @@ import ch.papers.zaturnsdk.internal.secret.SecretSharing
 import ch.papers.zaturnsdk.internal.secret.SecretSharingGroup
 import ch.papers.zaturnsdk.internal.secret.sskr.SskrSecretSharing
 import ch.papers.zaturnsdk.internal.util.*
-import ch.papers.zaturnsdk.internal.util.async
-import ch.papers.zaturnsdk.internal.util.encodeToBase64
-import ch.papers.zaturnsdk.internal.util.launch
-import ch.papers.zaturnsdk.internal.util.url
-import kotlin.math.min
+import kotlin.math.max
 
 public class Zaturn internal constructor(
     private val nodes: List<ZaturnNode>,
@@ -170,8 +166,8 @@ public class Zaturn internal constructor(
             val crypto = SodiumCrypto()
             val secretSharing = SskrSecretSharing()
             val shareConfiguration = ShareConfiguration(
-                groups = min(nodes.size, ZaturnConfiguration.MIN_GROUPS.toInt()),
-                groupThreshold = groupThreshold ?: min(
+                groups = max(nodes.size, ZaturnConfiguration.MIN_GROUPS.toInt()),
+                groupThreshold = groupThreshold ?: max(
                     (nodes.size / 2) + 1,
                     ZaturnConfiguration.MIN_GROUP_THRESHOLD.toInt()
                 ),
